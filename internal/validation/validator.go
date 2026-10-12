@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Validator struct {}
+type Validator struct{}
 
 func NewValidator() *Validator {
 	return &Validator{}
@@ -15,21 +15,21 @@ func (v *Validator) ValidateTaskData(desc string, deadline time.Time) error {
 	invalidFields := make([]InvalidFiled, 0)
 	if desc == "" {
 		invalidFields = append(invalidFields, InvalidFiled{
-			Err: ErrEmptyDesc,
+			Err:   ErrEmptyDesc,
 			Field: "description",
 		})
 	}
 
 	if deadline.Before(time.Now()) {
 		invalidFields = append(invalidFields, InvalidFiled{
-			Err: ErrMissedDeadline,
+			Err:   ErrMissedDeadline,
 			Field: "deadline",
 		})
 	}
 
 	if len(invalidFields) != 0 {
 		return &ValidationError{
-			Err: ErrValidation,
+			Err:    ErrValidation,
 			Fields: invalidFields,
 		}
 	}
@@ -43,7 +43,7 @@ func (v *Validator) CanChangeStatus(status task.Status) error {
 			Err: ErrValidation,
 			Fields: []InvalidFiled{
 				{
-					Err: ErrUnchangeableStatus,
+					Err:   ErrUnchangeableStatus,
 					Field: "status",
 				},
 			},

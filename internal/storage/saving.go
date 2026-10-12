@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
-	
+
 	"hw1taskmanager/internal/task"
 )
 
@@ -63,7 +63,7 @@ func (s *Storage) Restore() error {
 	if exists != nil {
 		return nil
 	}
-	
+
 	file, err := os.Open(saveFullPath)
 	if err != nil {
 		return fmt.Errorf("failed to read saved data: %w", err)
@@ -79,7 +79,11 @@ func (s *Storage) Restore() error {
 	if err != nil {
 		return fmt.Errorf("failed to decode tasks data: %w", err)
 	}
-	s.nextID = task.TaskID(len(s.tasks))
+	nextID := task.TaskID(0)
+	for _, task := range s.tasks {
+		nextID = max(nextID, task.ID+1)
+	}
+	s.nextID = task.TaskID(nextID)
 
 	return nil
 }

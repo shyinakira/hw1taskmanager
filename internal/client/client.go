@@ -6,13 +6,13 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"hw1taskmanager/internal/domain"
+	"hw1taskmanager/internal/parse"
 	"hw1taskmanager/internal/storage"
 	"hw1taskmanager/internal/task"
-
-	"github.com/google/shlex"
 )
 
 const HELP_MSG = `
@@ -22,7 +22,7 @@ COMMANDS:
     - add task: add "<task_description>" "<deadline>"
     - list all tasks: all
     - get task by id: task <task_id>
-    - update task: update <description/deadline/all> "<new_data>"...
+    - update task: change <task_id> <description/deadline/all> "<new_data>"...
     - change task status: status <task_id> <new_status>
     - delete task: delete <task_id>
 
@@ -54,23 +54,32 @@ func NewClient() *Client {
 	}
 }
 
-func (c *Client) processCommand() (error, bool) {
-	defer c.rw.Flush()
-	
+func (c *Client) readLine() ([]string, error) {
 	l, readErr := c.rw.ReadString('\n')
 	if readErr != nil {
-		return fmt.Errorf("failed to read command: %w", readErr), false
+		return []string{}, fmt.Errorf("failed to read command: %w", readErr)
 	}
 
-	parts, readErr := shlex.Split(l)
+	parts, readErr := parse.ParseCommandLine(strings.TrimSpace(l))
 	if readErr != nil {
-		return fmt.Errorf("failed to read command: %w", readErr), false
+		return []string{}, fmt.Errorf("failed to read command: %w", readErr)
 	}
 
 	if len(parts) == 0 {
-		return fmt.Errorf("failed to read command: %w", readErr), false
+		return []string{}, fmt.Errorf("failed to read command: %w", readErr)
 	}
-	
+
+	return parts, nil
+}
+
+func (c *Client) processCommand() (error, bool) {
+	defer c.rw.Flush()
+
+	parts, err := c.readLine()
+	if err != nil {
+		return err, false
+	}
+
 	cmd := parts[0]
 
 	switch cmd {
@@ -121,7 +130,7 @@ func (c *Client) processCommand() (error, bool) {
 		if status == task.UNKNOWN {
 			return fmt.Errorf(`%w. valid statuses: planned, in progress, done, canceled`, domain.ErrInvalidArgument), false
 		}
-		
+
 		err = c.status(id, status)
 		if err != nil {
 			return fmt.Errorf("processing error: %w", err), false
@@ -157,7 +166,7 @@ func (c *Client) processCommand() (error, bool) {
 				return fmt.Errorf("processing error: %w", err), false
 			}
 		default:
-			return fmt.Errorf(`%w. valid fields: description, deadline, all`, domain.ErrInvalidArgument), false 
+			return fmt.Errorf(`%w. valid fields: description, deadline, all`, domain.ErrInvalidArgument), false
 		}
 	case "delete":
 		if len(parts) != 2 {
@@ -189,7 +198,7 @@ func (c *Client) StartClient() {
 	for {
 		err, isEnd := c.processCommand()
 		if err != nil {
-			log.Printf(err.Error())
+			log.Println(err.Error())
 		}
 
 		if isEnd {

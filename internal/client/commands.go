@@ -85,7 +85,7 @@ func (c *Client) change(id int, field string, newDesc string, newDeadlineStr str
 
 	task, err := c.storage.ChangeTaskData(task.TaskID(id), field, task.TaskDTO{
 		Description: newDesc,
-		Deadline: deadline,
+		Deadline:    deadline,
 	})
 	if err != nil {
 		return err

@@ -27,7 +27,7 @@ type Storage struct {
 func NewStorage() *Storage {
 	s := &Storage{
 		validator: validation.NewValidator(),
-		tasks: make(map[task.TaskID]*task.Task),
+		tasks:     make(map[task.TaskID]*task.Task),
 	}
 	s.Restore()
 	return s
@@ -101,14 +101,14 @@ func (s *Storage) ChangeTaskData(id task.TaskID, field string, newData task.Task
 	if !ok {
 		return nil, fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
 	}
-	
+
 	switch field {
-		case "description":
-			newData.Deadline = targetTask.Deadline
-		case "deadline":
-			newData.Description = targetTask.Description
+	case "description":
+		newData.Deadline = targetTask.Deadline
+	case "deadline":
+		newData.Description = targetTask.Description
 	}
-	
+
 	err := s.validator.ValidateTaskData(newData.Description, newData.Deadline)
 	if err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
@@ -128,11 +128,17 @@ func (s *Storage) ChangeTaskData(id task.TaskID, field string, newData task.Task
 }
 
 func (s *Storage) DeleteTask(id task.TaskID) error {
-	_, ok := s.tasks[id]
+	task, ok := s.tasks[id]
 	if !ok {
 		return fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
 	}
 
 	delete(s.tasks, id)
+	err := s.SaveTasks()
+	if err != nil {
+		s.tasks[id] = task
+		return fmt.Errorf("failed to save tasks: %w", err)
+	}
+
 	return nil
 }
