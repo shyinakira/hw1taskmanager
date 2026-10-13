@@ -1,8 +1,7 @@
-package task
+package domain
 
 import (
 	"fmt"
-	"hw1taskmanager/internal/domain"
 	"time"
 )
 
@@ -70,7 +69,7 @@ func (t Task) String() string {
 		t.ID,
 		t.Description,
 		t.Status.String(),
-		t.Deadline.Format(domain.TIME_LAYOUT),
+		t.Deadline.Format(TIME_LAYOUT),
 	)
 }
 

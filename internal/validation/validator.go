@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"hw1taskmanager/internal/task"
+	"hw1taskmanager/internal/domain"
 	"time"
 )
 
@@ -37,8 +37,8 @@ func (v *Validator) ValidateTaskData(desc string, deadline time.Time) error {
 	return nil
 }
 
-func (v *Validator) CanChangeStatus(status task.Status) error {
-	if status == task.DONE || status == task.CANCELED {
+func (v *Validator) CanChangeStatus(status domain.Status) error {
+	if status == domain.DONE || status == domain.CANCELED {
 		return &ValidationError{
 			Err: ErrValidation,
 			Fields: []InvalidFiled{

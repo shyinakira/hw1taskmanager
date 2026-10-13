@@ -30,7 +30,7 @@ func ParseCommandLine(s string) ([]string, error) {
 		}
 	}
 	if quote {
-		return []string{}, domain.ErrQuoteDoesntClosed
+		return []string{}, domain.ErrUnclosedQuote
 	}
 
 	if currentPart != "" {

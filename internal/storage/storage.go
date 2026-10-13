@@ -4,102 +4,79 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"sort"
 	"time"
 
 	"hw1taskmanager/internal/domain"
-	"hw1taskmanager/internal/task"
-	"hw1taskmanager/internal/validation"
 )
 
-type Validator interface {
-	ValidateTaskData(desc string, deadline time.Time) error
-	CanChangeStatus(status task.Status) error
-}
-
 type Storage struct {
-	validator  Validator
-	nextID     task.TaskID
+	nextID     domain.TaskID
 	savingPath string
-	tasks      map[task.TaskID]*task.Task
+	tasks      map[domain.TaskID]*domain.Task
 }
 
 func NewStorage() *Storage {
 	s := &Storage{
-		validator: validation.NewValidator(),
-		tasks:     make(map[task.TaskID]*task.Task),
+		tasks: make(map[domain.TaskID]*domain.Task),
 	}
 	s.Restore()
 	return s
 }
 
-func (s *Storage) AddTask(desc string, deadline time.Time) (*task.Task, error) {
-	err := s.validator.ValidateTaskData(desc, deadline)
-	if err != nil {
-		return nil, fmt.Errorf("validation error: %w", err)
-	}
-
-	newTask := task.NewTask(s.nextID, desc, deadline)
+func (s *Storage) AddTask(desc string, deadline time.Time) (domain.Task, error) {
+	newTask := domain.NewTask(s.nextID, desc, deadline)
 	s.tasks[s.nextID] = newTask
 	s.nextID++
 
-	err = s.SaveTasks()
+	err := s.SaveTasks()
 	if err != nil {
 		delete(s.tasks, s.nextID)
 		s.nextID--
-		return nil, fmt.Errorf("failed to save tasks: %w", err)
+		return domain.Task{}, fmt.Errorf("failed to save tasks: %w", err)
 	}
-	return newTask, nil
+	return *newTask, nil
 }
 
-func (s *Storage) GetTasks() ([]*task.Task, error) {
+func (s *Storage) GetTasks() ([]domain.Task, error) {
 	tasks := slices.Collect(maps.Values(s.tasks))
-	sort.Slice(tasks, func(i, j int) bool {
-		if !tasks[i].Deadline.Equal(tasks[j].Deadline) {
-			return tasks[i].Deadline.Before(tasks[j].Deadline)
-		}
-
-		return tasks[i].ID < tasks[j].ID
-	})
-
-	return tasks, nil
-}
-
-func (s *Storage) GetTaskByID(id task.TaskID) (*task.Task, error) {
-	targetTask, ok := s.tasks[id]
-	if !ok {
-		return nil, fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
-	}
-	return targetTask, nil
-}
-
-func (s *Storage) ChangeTaskStatus(id task.TaskID, newStatus task.Status) (*task.Task, error) {
-	targetTask, ok := s.tasks[id]
-	if !ok {
-		return nil, fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
+	tasksVal := make([]domain.Task, len(tasks))
+	for i, task := range tasks {
+		tasksVal[i] = *task
 	}
 
-	err := s.validator.CanChangeStatus(targetTask.Status)
-	if err != nil {
-		return nil, fmt.Errorf("validation error: %w", err)
+	return tasksVal, nil
+}
+
+func (s *Storage) GetTaskByID(id domain.TaskID) (domain.Task, error) {
+	targetTask, ok := s.tasks[id]
+	if !ok {
+		return domain.Task{}, fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
+	}
+	return *targetTask, nil
+}
+
+func (s *Storage) ChangeTaskStatus(id domain.TaskID, newStatus domain.Status) (domain.Task, error) {
+	targetTask, ok := s.tasks[id]
+	if !ok {
+		return domain.Task{}, fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
 	}
 
 	oldStatus := targetTask.Status
 	targetTask.Status = newStatus
 
-	err = s.SaveTasks()
+	err := s.SaveTasks()
 	if err != nil {
 		targetTask.Status = oldStatus
-		return nil, fmt.Errorf("failed to save tasks: %w", err)
+		return domain.Task{}, fmt.Errorf("failed to save tasks: %w", err)
 	}
 
-	return targetTask, nil
+	return *targetTask, nil
 }
 
-func (s *Storage) ChangeTaskData(id task.TaskID, field string, newData task.TaskDTO) (*task.Task, error) {
+func (s *Storage) ChangeTaskData(id domain.TaskID, field string, newData domain.TaskDTO) (domain.Task, error) {
 	targetTask, ok := s.tasks[id]
 	if !ok {
-		return nil, fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
+		return domain.Task{}, fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)
 	}
 
 	switch field {
@@ -109,25 +86,20 @@ func (s *Storage) ChangeTaskData(id task.TaskID, field string, newData task.Task
 		newData.Description = targetTask.Description
 	}
 
-	err := s.validator.ValidateTaskData(newData.Description, newData.Deadline)
-	if err != nil {
-		return nil, fmt.Errorf("validation error: %w", err)
-	}
-
 	oldTask := targetTask
 	targetTask.Description = newData.Description
 	targetTask.Deadline = newData.Deadline
 
-	err = s.SaveTasks()
+	err := s.SaveTasks()
 	if err != nil {
 		targetTask = oldTask
-		return nil, fmt.Errorf("failed to save tasks: %w", err)
+		return domain.Task{}, fmt.Errorf("failed to save tasks: %w", err)
 	}
 
-	return targetTask, nil
+	return *targetTask, nil
 }
 
-func (s *Storage) DeleteTask(id task.TaskID) error {
+func (s *Storage) DeleteTask(id domain.TaskID) error {
 	task, ok := s.tasks[id]
 	if !ok {
 		return fmt.Errorf("ID %d: %w", id, domain.ErrTaskNotFound)

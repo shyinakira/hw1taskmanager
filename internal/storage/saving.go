@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 
-	"hw1taskmanager/internal/task"
+	"hw1taskmanager/internal/domain"
 )
 
 const SAVE_FILE_NAME = "saved_tasks.json"
@@ -79,11 +79,11 @@ func (s *Storage) Restore() error {
 	if err != nil {
 		return fmt.Errorf("failed to decode tasks data: %w", err)
 	}
-	nextID := task.TaskID(0)
+	nextID := domain.TaskID(0)
 	for _, task := range s.tasks {
 		nextID = max(nextID, task.ID+1)
 	}
-	s.nextID = task.TaskID(nextID)
+	s.nextID = domain.TaskID(nextID)
 
 	return nil
 }

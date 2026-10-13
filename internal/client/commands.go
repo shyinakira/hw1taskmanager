@@ -1,107 +1,168 @@
 package client
 
 import (
-	"time"
+	"fmt"
+	"strconv"
 
 	"hw1taskmanager/internal/domain"
-	"hw1taskmanager/internal/task"
 )
 
-func convertTime(stringTime string) (time.Time, error) {
-	loc, err := time.LoadLocation("Asia/Yekaterinburg")
-	if err != nil {
-		return time.Time{}, nil
-	}
-	time, err := time.ParseInLocation(domain.TIME_LAYOUT, stringTime, loc)
-	if err != nil {
-		return time, err
+func (c *Client) add(parts []string) error {
+	if len(parts) != 3 {
+		return fmt.Errorf(`%w. format: add "new task" "30.01.2077 12:00"`, domain.ErrWrongArgsCount)
 	}
 
-	return time, nil
-}
-
-func (c *Client) add(desc string, deadlineStr string) error {
-	deadline, err := convertTime(deadlineStr)
+	desc := parts[1]
+	deadline := parts[2]
+	task, err := c.service.AddTask(desc, deadline)
 	if err != nil {
-		return err
+		return fmt.Errorf("processing error: %w", err)
 	}
 
-	task, err := c.storage.AddTask(desc, deadline)
+	_, err = c.rw.Write([]byte(task.String()))
 	if err != nil {
-		return err
+		return fmt.Errorf("processing error: %w", err)
 	}
 
-	c.rw.WriteString("task added")
-	c.rw.WriteString(task.String())
 	return nil
 }
 
-func (c *Client) all() error {
-	tasks, err := c.storage.GetTasks()
-	if err != nil {
-		return err
+func (c *Client) all(parts []string) error {
+	if len(parts) != 1 {
+		return fmt.Errorf(`%w. format: all`, domain.ErrWrongArgsCount)
 	}
 
+	tasks, err := c.service.AllTasks()
+
+	res := make([]byte, 0)
 	for _, task := range tasks {
-		_, err := c.rw.WriteString(task.String())
-		if err != nil {
-			return err
+		res = append(res, []byte(task.String())...)
+	}
+
+	_, err = c.rw.Write(res)
+	if err != nil {
+		return fmt.Errorf("processing error: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) task(parts []string) error {
+	if len(parts) != 2 {
+		return fmt.Errorf(`%w. format: task 1111`, domain.ErrWrongArgsCount)
+	}
+
+	id, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return fmt.Errorf(`%w. id must be a number`, domain.ErrInvalidArgument)
+	}
+
+	task, err := c.service.GetTask(id)
+
+	_, err = c.rw.Write([]byte(task.String()))
+	if err != nil {
+		return fmt.Errorf("processing error: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) status(parts []string) error {
+	if len(parts) != 3 {
+		return fmt.Errorf(`%w. format: status 1111 done`, domain.ErrWrongArgsCount)
+	}
+
+	id, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return fmt.Errorf(`%w. id must be a number`, domain.ErrInvalidArgument)
+	}
+
+	status := domain.StringToStatus(parts[2])
+	if status == domain.UNKNOWN {
+		return fmt.Errorf(`%w. valid statuses: planned, in progress, done, canceled`, domain.ErrInvalidArgument)
+	}
+
+	task, err := c.service.ChangeStatus(id, status)
+
+	_, err = c.rw.Write([]byte(task.String()))
+	if err != nil {
+		return fmt.Errorf("processing error: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) change(parts []string) error {
+	if len(parts) < 4 {
+		return fmt.Errorf(`%w. format: change 1111 description "another task"`, domain.ErrWrongArgsCount)
+	}
+
+	id, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return fmt.Errorf(`%w. id must be a number`, domain.ErrInvalidArgument)
+	}
+
+	field := parts[2]
+	switch field {
+	case "all":
+		if len(parts) != 5 {
+			return fmt.Errorf(`%w. format: change 1111 all "another task" "30.01.2077 12:00"`, domain.ErrWrongArgsCount)
 		}
-	}
-
-	return nil
-}
-
-func (c *Client) task(id int) error {
-	task, err := c.storage.GetTaskByID(task.TaskID(id))
-	if err != nil {
-		return err
-	}
-
-	c.rw.WriteString(task.String())
-	return nil
-}
-
-func (c *Client) status(id int, newStatus task.Status) error {
-	task, err := c.storage.ChangeTaskStatus(task.TaskID(id), newStatus)
-	if err != nil {
-		return err
-	}
-
-	c.rw.WriteString("status changed")
-	c.rw.WriteString(task.String())
-	return nil
-}
-
-func (c *Client) change(id int, field string, newDesc string, newDeadlineStr string) error {
-	var deadline time.Time
-	var err error
-	if newDeadlineStr != "" {
-		deadline, err = convertTime(newDeadlineStr)
+		task, err := c.service.ChangeTask(id, field, parts[3], parts[4])
 		if err != nil {
-			return err
+			return fmt.Errorf("processing error: %w", err)
 		}
+
+		_, err = c.rw.Write([]byte(task.String()))
+		if err != nil {
+			return fmt.Errorf("processing error: %w", err)
+		}
+	case "description":
+		task, err := c.service.ChangeTask(id, field, parts[3], "")
+		if err != nil {
+			return fmt.Errorf("processing error: %w", err)
+		}
+
+		_, err = c.rw.Write([]byte(task.String()))
+		if err != nil {
+			return fmt.Errorf("processing error: %w", err)
+		}
+	case "deadline":
+		task, err := c.service.ChangeTask(id, field, "", parts[4])
+		if err != nil {
+			return fmt.Errorf("processing error: %w", err)
+		}
+
+		_, err = c.rw.Write([]byte(task.String()))
+		if err != nil {
+			return fmt.Errorf("processing error: %w", err)
+		}
+	default:
+		return fmt.Errorf(`%w. valid fields: description, deadline, all`, domain.ErrInvalidArgument)
 	}
 
-	task, err := c.storage.ChangeTaskData(task.TaskID(id), field, task.TaskDTO{
-		Description: newDesc,
-		Deadline:    deadline,
-	})
-	if err != nil {
-		return err
-	}
-
-	c.rw.WriteString("task changed")
-	c.rw.WriteString(task.String())
 	return nil
 }
 
-func (c *Client) delete(id int) error {
-	err := c.storage.DeleteTask(task.TaskID(id))
-	if err != nil {
-		return err
+func (c *Client) delete(parts []string) error {
+	if len(parts) != 2 {
+		return fmt.Errorf(`%w. format: delete 1111`, domain.ErrWrongArgsCount)
 	}
 
-	c.rw.WriteString("task deleted\n")
+	id, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return fmt.Errorf(`%w. id must be a number`, domain.ErrInvalidArgument)
+	}
+
+	err = c.service.DeleteTask(id)
+	if err != nil {
+		return fmt.Errorf("processing error: %w", err)
+	}
+
+	_, err = c.rw.Write([]byte("task deleted\n"))
+	if err != nil {
+		return fmt.Errorf("processing error: %w", err)
+	}
+
 	return nil
 }
