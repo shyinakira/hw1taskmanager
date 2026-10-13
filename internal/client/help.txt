@@ -1,10 +1,10 @@
 cli application for task management
 
 COMMANDS:
-    - add task: add "<task_description>" "<deadline>"
+    - add task: add "<task_title>" "<deadline>"
     - list all tasks: all
     - get task by id: task <task_id>
-    - update task: update <description/deadline/all> "<new_data>"...
+    - update task: change <title/deadline/all> "<new_data>"...
     - change task status: status <task_id> <new_status>
     - delete task: delete <task_id>
 

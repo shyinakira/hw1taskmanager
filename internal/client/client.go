@@ -31,10 +31,10 @@ deadline format: "02-01-2006 15:04"
 type TasksService interface {
 	AddTask(desc string, deadlineStr string) (domain.Task, error)
 	AllTasks() ([]domain.Task, error)
-	GetTask(id int) (domain.Task, error)
-	ChangeStatus(id int, newStatus domain.Status) (domain.Task, error)
-	ChangeTask(id int, field string, newDesc string, newDeadlineStr string) (domain.Task, error)
-	DeleteTask(id int) error
+	GetTask(id domain.TaskID) (domain.Task, error)
+	ChangeStatus(id domain.TaskID, newStatus domain.Status) (domain.Task, error)
+	ChangeTask(id domain.TaskID, field string, newDesc string, newDeadlineStr string) (domain.Task, error)
+	DeleteTask(id domain.TaskID) error
 }
 
 type Client struct {
@@ -63,10 +63,6 @@ func (c *Client) readLine() ([]string, error) {
 		return []string{}, fmt.Errorf("failed to read command: %w", readErr)
 	}
 
-	if len(parts) == 0 {
-		return []string{}, fmt.Errorf("failed to read command: %w", readErr)
-	}
-
 	return parts, nil
 }
 
@@ -76,6 +72,10 @@ func (c *Client) processCommand() (error, bool) {
 	parts, err := c.readLine()
 	if err != nil {
 		return err, false
+	}
+
+	if len(parts) == 0 {
+		return nil, false
 	}
 
 	cmd := parts[0]
@@ -101,7 +101,7 @@ func (c *Client) processCommand() (error, bool) {
 	case "exit":
 		return nil, true
 	default:
-		return fmt.Errorf("processing error: %w", domain.ErrUnknowmCommand), false
+		return fmt.Errorf("processing error: %w", domain.ErrUnknownCommand), false
 	}
 
 	return nil, false

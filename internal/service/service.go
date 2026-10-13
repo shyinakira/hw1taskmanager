@@ -9,6 +9,7 @@ import (
 )
 
 type Validator interface {
+	CanEdit(status domain.Status) error
 	ValidateTaskData(title string, deadline time.Time) error
 	CanChangeStatus(oldStatus, newStatus domain.Status) error
 }
@@ -81,8 +82,8 @@ func (s *TasksService) AllTasks() ([]domain.Task, error) {
 	return tasks, nil
 }
 
-func (s *TasksService) GetTask(id int) (domain.Task, error) {
-	task, err := s.storage.GetTaskByID(domain.TaskID(id))
+func (s *TasksService) GetTask(id domain.TaskID) (domain.Task, error) {
+	task, err := s.storage.GetTaskByID(id)
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("error while trying to get task by id: %w", err)
 	}
@@ -90,8 +91,8 @@ func (s *TasksService) GetTask(id int) (domain.Task, error) {
 	return task, nil
 }
 
-func (s *TasksService) ChangeStatus(id int, newStatus domain.Status) (domain.Task, error) {
-	task, err := s.storage.GetTaskByID(domain.TaskID(id))
+func (s *TasksService) ChangeStatus(id domain.TaskID, newStatus domain.Status) (domain.Task, error) {
+	task, err := s.storage.GetTaskByID(id)
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("error while trying to change task status: %w", err)
 	}
@@ -101,7 +102,7 @@ func (s *TasksService) ChangeStatus(id int, newStatus domain.Status) (domain.Tas
 		return domain.Task{}, fmt.Errorf("error while trying to change task status: %w", err)
 	}
 
-	task, err = s.storage.ChangeTaskStatus(domain.TaskID(id), newStatus)
+	task, err = s.storage.ChangeTaskStatus(id, newStatus)
 	if err != nil {
 		return domain.Task{}, err
 	}
@@ -109,7 +110,17 @@ func (s *TasksService) ChangeStatus(id int, newStatus domain.Status) (domain.Tas
 	return task, nil
 }
 
-func (s *TasksService) ChangeTask(id int, field string, newTitle string, newDeadlineStr string) (domain.Task, error) {
+func (s *TasksService) ChangeTask(id domain.TaskID, field string, newTitle string, newDeadlineStr string) (domain.Task, error) {
+	task, err := s.storage.GetTaskByID(id)
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("error while trying to change task status: %w", err)
+	}
+
+	err = s.validator.CanEdit(task.Status)
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("error while trying to change task data: %w", err)
+	}
+
 	var deadline time.Time
 	switch field {
 	case "title":
@@ -118,7 +129,7 @@ func (s *TasksService) ChangeTask(id int, field string, newTitle string, newDead
 			return domain.Task{}, fmt.Errorf("error while trying to change task data: %w", err)
 		}
 	case "deadline":
-		task, err := s.storage.GetTaskByID(domain.TaskID(id))
+		task, err := s.storage.GetTaskByID(id)
 		if err != nil {
 			return domain.Task{}, fmt.Errorf("error while trying to change task data: %w", err)
 		}
@@ -145,7 +156,7 @@ func (s *TasksService) ChangeTask(id int, field string, newTitle string, newDead
 		}
 	}
 
-	task, err := s.storage.ChangeTaskData(domain.TaskID(id), field, domain.TaskDTO{
+	task, err = s.storage.ChangeTaskData(id, field, domain.TaskDTO{
 		Title:    newTitle,
 		Deadline: deadline,
 	})
@@ -156,8 +167,8 @@ func (s *TasksService) ChangeTask(id int, field string, newTitle string, newDead
 	return task, nil
 }
 
-func (s *TasksService) DeleteTask(id int) error {
-	err := s.storage.DeleteTask(domain.TaskID(id))
+func (s *TasksService) DeleteTask(id domain.TaskID) error {
+	err := s.storage.DeleteTask(id)
 	if err != nil {
 		return fmt.Errorf("error while trying to delete task: %w", err)
 	}

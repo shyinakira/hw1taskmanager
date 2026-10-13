@@ -12,9 +12,9 @@ func (c *Client) add(parts []string) error {
 		return fmt.Errorf(`%w. format: add "new task" "30-01-2077 12:00"`, domain.ErrWrongArgsCount)
 	}
 
-	desc := parts[1]
+	title := parts[1]
 	deadline := parts[2]
-	task, err := c.service.AddTask(desc, deadline)
+	task, err := c.service.AddTask(title, deadline)
 	if err != nil {
 		return fmt.Errorf("processing error: %w", err)
 	}
@@ -57,7 +57,7 @@ func (c *Client) task(parts []string) error {
 		return fmt.Errorf(`%w. id must be a number`, domain.ErrInvalidArgument)
 	}
 
-	task, err := c.service.GetTask(id)
+	task, err := c.service.GetTask(domain.TaskID(id))
 	if err != nil {
 		return fmt.Errorf("processing error: %w", err)
 	}
@@ -85,7 +85,7 @@ func (c *Client) status(parts []string) error {
 		return fmt.Errorf(`%w. valid statuses: planned, in_progress, done, canceled`, domain.ErrInvalidArgument)
 	}
 
-	task, err := c.service.ChangeStatus(id, status)
+	task, err := c.service.ChangeStatus(domain.TaskID(id), status)
 	if err != nil {
 		return fmt.Errorf("processing error: %w", err)
 	}
@@ -100,7 +100,7 @@ func (c *Client) status(parts []string) error {
 
 func (c *Client) change(parts []string) error {
 	if len(parts) < 4 {
-		return fmt.Errorf(`%w. format: change 1111 description "another task"`, domain.ErrWrongArgsCount)
+		return fmt.Errorf(`%w. format: change 1111 title "another task"`, domain.ErrWrongArgsCount)
 	}
 
 	id, err := strconv.Atoi(parts[1])
@@ -114,7 +114,7 @@ func (c *Client) change(parts []string) error {
 		if len(parts) != 5 {
 			return fmt.Errorf(`%w. format: change 1111 all "another task" "30-01-2077 12:00"`, domain.ErrWrongArgsCount)
 		}
-		task, err := c.service.ChangeTask(id, field, parts[3], parts[4])
+		task, err := c.service.ChangeTask(domain.TaskID(id), field, parts[3], parts[4])
 		if err != nil {
 			return fmt.Errorf("processing error: %w", err)
 		}
@@ -124,7 +124,7 @@ func (c *Client) change(parts []string) error {
 			return fmt.Errorf("processing error: %w", err)
 		}
 	case "title":
-		task, err := c.service.ChangeTask(id, field, parts[3], "")
+		task, err := c.service.ChangeTask(domain.TaskID(id), field, parts[3], "")
 		if err != nil {
 			return fmt.Errorf("processing error: %w", err)
 		}
@@ -134,7 +134,7 @@ func (c *Client) change(parts []string) error {
 			return fmt.Errorf("processing error: %w", err)
 		}
 	case "deadline":
-		task, err := c.service.ChangeTask(id, field, "", parts[3])
+		task, err := c.service.ChangeTask(domain.TaskID(id), field, "", parts[3])
 		if err != nil {
 			return fmt.Errorf("processing error: %w", err)
 		}
@@ -144,7 +144,7 @@ func (c *Client) change(parts []string) error {
 			return fmt.Errorf("processing error: %w", err)
 		}
 	default:
-		return fmt.Errorf(`%w. valid fields: description, deadline, all`, domain.ErrInvalidArgument)
+		return fmt.Errorf(`%w. valid fields: title, deadline, all`, domain.ErrInvalidArgument)
 	}
 
 	return nil
@@ -160,7 +160,7 @@ func (c *Client) delete(parts []string) error {
 		return fmt.Errorf(`%w. id must be a number`, domain.ErrInvalidArgument)
 	}
 
-	err = c.service.DeleteTask(id)
+	err = c.service.DeleteTask(domain.TaskID(id))
 	if err != nil {
 		return fmt.Errorf("processing error: %w", err)
 	}

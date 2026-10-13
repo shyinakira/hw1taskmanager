@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	ErrUnclosedQuote = errors.New("quote doesn't closed")
+	ErrUnclosedQuote = errors.New("quote is not closed")
 
 	ErrTimezone        = errors.New("unknowm timezone")
-	ErrUnknowmCommand  = errors.New("unknowm command")
+	ErrUnknownCommand  = errors.New("unknowm command")
 	ErrWrongArgsCount  = errors.New("invalid arguments provided")
 	ErrInvalidArgument = errors.New("invalid argument")
 
