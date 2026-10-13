@@ -5,12 +5,24 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 
 	"hw1taskmanager/internal/domain"
 )
 
 const SAVE_FILE_NAME = "saved_tasks.json"
+
+type StorageData struct {
+	NextID domain.TaskID                  `json:"next_id"`
+	Tasks  map[domain.TaskID]*domain.Task `json:"tasks"`
+}
+
+func (s *Storage) getData() StorageData {
+	return StorageData{
+		NextID: s.nextID,
+		Tasks:  s.tasks,
+	}
+}
 
 func (s *Storage) resolveSavePath() (string, error) {
 	if s.savingPath != "" {
@@ -26,7 +38,7 @@ func (s *Storage) resolveSavePath() (string, error) {
 }
 
 func (s *Storage) SaveTasks() error {
-	tasksJSON, err := json.Marshal(s.tasks)
+	tasksJSON, err := json.Marshal(s.getData())
 
 	if err != nil {
 		return fmt.Errorf("failed to encode tasks data: %w", err)
@@ -36,7 +48,7 @@ func (s *Storage) SaveTasks() error {
 	if err != nil {
 		return err
 	}
-	saveFullPath := path.Join(saveFolder, SAVE_FILE_NAME)
+	saveFullPath := filepath.Join(saveFolder, SAVE_FILE_NAME)
 
 	file, err := os.Create(saveFullPath)
 	if err != nil {
@@ -57,7 +69,7 @@ func (s *Storage) Restore() error {
 	if err != nil {
 		return err
 	}
-	saveFullPath := path.Join(saveFolder, SAVE_FILE_NAME)
+	saveFullPath := filepath.Join(saveFolder, SAVE_FILE_NAME)
 
 	_, exists := os.Stat(saveFullPath)
 	if exists != nil {
@@ -70,20 +82,19 @@ func (s *Storage) Restore() error {
 	}
 	defer file.Close()
 
-	binTasks, err := io.ReadAll(file)
+	binStorageData, err := io.ReadAll(file)
 	if err != nil {
 		return fmt.Errorf("failed to read saved data: %w", err)
 	}
 
-	err = json.Unmarshal(binTasks, &s.tasks)
+	var storageData StorageData
+	err = json.Unmarshal(binStorageData, &storageData)
 	if err != nil {
 		return fmt.Errorf("failed to decode tasks data: %w", err)
 	}
-	nextID := domain.TaskID(0)
-	for _, task := range s.tasks {
-		nextID = max(nextID, task.ID+1)
-	}
-	s.nextID = domain.TaskID(nextID)
+
+	s.nextID = storageData.NextID
+	s.tasks = storageData.Tasks
 
 	return nil
 }

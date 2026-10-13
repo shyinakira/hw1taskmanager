@@ -10,21 +10,25 @@ import (
 )
 
 type Storage struct {
-	nextID     domain.TaskID
 	savingPath string
+	nextID     domain.TaskID
 	tasks      map[domain.TaskID]*domain.Task
 }
 
-func NewStorage() *Storage {
+func NewStorage() (*Storage, error) {
 	s := &Storage{
 		tasks: make(map[domain.TaskID]*domain.Task),
 	}
-	s.Restore()
-	return s
+	err := s.Restore()
+	if err != nil {
+		return nil, fmt.Errorf("failed to restore storage: %w", err)
+	}
+
+	return s, nil
 }
 
-func (s *Storage) AddTask(desc string, deadline time.Time) (domain.Task, error) {
-	newTask := domain.NewTask(s.nextID, desc, deadline)
+func (s *Storage) AddTask(title string, deadline time.Time) (domain.Task, error) {
+	newTask := domain.NewTask(s.nextID, title, deadline)
 	s.tasks[s.nextID] = newTask
 	s.nextID++
 
@@ -80,14 +84,14 @@ func (s *Storage) ChangeTaskData(id domain.TaskID, field string, newData domain.
 	}
 
 	switch field {
-	case "description":
+	case "title":
 		newData.Deadline = targetTask.Deadline
 	case "deadline":
-		newData.Description = targetTask.Description
+		newData.Title = targetTask.Title
 	}
 
 	oldTask := targetTask
-	targetTask.Description = newData.Description
+	targetTask.Title = newData.Title
 	targetTask.Deadline = newData.Deadline
 
 	err := s.SaveTasks()

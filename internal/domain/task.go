@@ -13,7 +13,7 @@ func StringToStatus(s string) Status {
 	switch s {
 	case "planned":
 		return PLANNED
-	case "in progress":
+	case "in_progress":
 		return IN_PROGRESS
 	case "canceled":
 		return CANCELED
@@ -29,7 +29,7 @@ func (s Status) String() string {
 	case PLANNED:
 		return "planned"
 	case IN_PROGRESS:
-		return "in progress"
+		return "in_progress"
 	case CANCELED:
 		return "canceled"
 	case DONE:
@@ -52,32 +52,32 @@ const (
 type TaskID int64
 
 type Task struct {
-	ID          TaskID    `json:"id"`
-	Description string    `json:"description"`
-	Status      Status    `json:"status"`
-	Deadline    time.Time `json:"deadline"`
+	ID       TaskID    `json:"id"`
+	Title    string    `json:"description"`
+	Status   Status    `json:"status"`
+	Deadline time.Time `json:"deadline"`
 }
 
 type TaskDTO struct {
-	Description string
-	Deadline    time.Time
+	Title    string
+	Deadline time.Time
 }
 
 func (t Task) String() string {
 	return fmt.Sprintf(
 		"\nID: %d\nTask description: %s\nStatus: %s\nDeadline: %v\n\n",
 		t.ID,
-		t.Description,
+		t.Title,
 		t.Status.String(),
 		t.Deadline.Format(TIME_LAYOUT),
 	)
 }
 
-func NewTask(id TaskID, description string, deadline time.Time) *Task {
+func NewTask(id TaskID, title string, deadline time.Time) *Task {
 	return &Task{
-		ID:          id,
-		Description: description,
-		Status:      PLANNED,
-		Deadline:    deadline,
+		ID:       id,
+		Title:    title,
+		Status:   PLANNED,
+		Deadline: deadline,
 	}
 }

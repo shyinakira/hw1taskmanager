@@ -11,16 +11,17 @@ var (
 	ErrEmptyDesc          = errors.New("description cant be empty")
 	ErrMissedDeadline     = errors.New("deadline cant be already missed")
 	ErrUnchangeableStatus = errors.New("cant change done or canceled tasks")
+	ErrSameStatus         = errors.New("new status cant be same")
 )
 
-type InvalidFiled struct {
+type InvalidField struct {
 	Err   error
 	Field string
 }
 
 type ValidationError struct {
 	Err    error
-	Fields []InvalidFiled
+	Fields []InvalidField
 }
 
 func (e *ValidationError) Error() string {
@@ -30,4 +31,8 @@ func (e *ValidationError) Error() string {
 	}
 
 	return errStr
+}
+
+func (e *ValidationError) Unwrap() error {
+	return e.Err
 }

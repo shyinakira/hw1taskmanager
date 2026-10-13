@@ -2,7 +2,9 @@ package client
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -15,10 +17,10 @@ const HELP_MSG = `
 cli application for task management
 
 COMMANDS:
-    - add task: add "<task_description>" "<deadline>"
+    - add task: add "<title>" "<deadline>"
     - list all tasks: all
     - get task by id: task <task_id>
-    - update task: change <task_id> <description/deadline/all> "<new_data>"...
+    - update task: change <task_id> <title/deadline/all> "<new_data>"...
     - change task status: status <task_id> <new_status>
     - delete task: delete <task_id>
 
@@ -109,6 +111,9 @@ func (c *Client) StartClient() {
 	for {
 		err, isExit := c.processCommand()
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return
+			}
 			log.Println(err.Error())
 		}
 

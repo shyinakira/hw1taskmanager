@@ -9,7 +9,7 @@ import (
 
 func (c *Client) add(parts []string) error {
 	if len(parts) != 3 {
-		return fmt.Errorf(`%w. format: add "new task" "30.01.2077 12:00"`, domain.ErrWrongArgsCount)
+		return fmt.Errorf(`%w. format: add "new task" "30-01-2077 12:00"`, domain.ErrWrongArgsCount)
 	}
 
 	desc := parts[1]
@@ -58,6 +58,9 @@ func (c *Client) task(parts []string) error {
 	}
 
 	task, err := c.service.GetTask(id)
+	if err != nil {
+		return fmt.Errorf("processing error: %w", err)
+	}
 
 	_, err = c.rw.Write([]byte(task.String()))
 	if err != nil {
@@ -79,10 +82,13 @@ func (c *Client) status(parts []string) error {
 
 	status := domain.StringToStatus(parts[2])
 	if status == domain.UNKNOWN {
-		return fmt.Errorf(`%w. valid statuses: planned, in progress, done, canceled`, domain.ErrInvalidArgument)
+		return fmt.Errorf(`%w. valid statuses: planned, in_progress, done, canceled`, domain.ErrInvalidArgument)
 	}
 
 	task, err := c.service.ChangeStatus(id, status)
+	if err != nil {
+		return fmt.Errorf("processing error: %w", err)
+	}
 
 	_, err = c.rw.Write([]byte(task.String()))
 	if err != nil {
@@ -106,7 +112,7 @@ func (c *Client) change(parts []string) error {
 	switch field {
 	case "all":
 		if len(parts) != 5 {
-			return fmt.Errorf(`%w. format: change 1111 all "another task" "30.01.2077 12:00"`, domain.ErrWrongArgsCount)
+			return fmt.Errorf(`%w. format: change 1111 all "another task" "30-01-2077 12:00"`, domain.ErrWrongArgsCount)
 		}
 		task, err := c.service.ChangeTask(id, field, parts[3], parts[4])
 		if err != nil {
@@ -117,7 +123,7 @@ func (c *Client) change(parts []string) error {
 		if err != nil {
 			return fmt.Errorf("processing error: %w", err)
 		}
-	case "description":
+	case "title":
 		task, err := c.service.ChangeTask(id, field, parts[3], "")
 		if err != nil {
 			return fmt.Errorf("processing error: %w", err)
@@ -128,7 +134,7 @@ func (c *Client) change(parts []string) error {
 			return fmt.Errorf("processing error: %w", err)
 		}
 	case "deadline":
-		task, err := c.service.ChangeTask(id, field, "", parts[4])
+		task, err := c.service.ChangeTask(id, field, "", parts[3])
 		if err != nil {
 			return fmt.Errorf("processing error: %w", err)
 		}

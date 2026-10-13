@@ -11,17 +11,17 @@ func NewValidator() *Validator {
 	return &Validator{}
 }
 
-func (v *Validator) ValidateTaskData(desc string, deadline time.Time) error {
-	invalidFields := make([]InvalidFiled, 0)
-	if desc == "" {
-		invalidFields = append(invalidFields, InvalidFiled{
+func (v *Validator) ValidateTaskData(title string, deadline time.Time) error {
+	invalidFields := make([]InvalidField, 0)
+	if title == "" {
+		invalidFields = append(invalidFields, InvalidField{
 			Err:   ErrEmptyDesc,
-			Field: "description",
+			Field: "title",
 		})
 	}
 
-	if deadline.Before(time.Now()) {
-		invalidFields = append(invalidFields, InvalidFiled{
+	if !deadline.IsZero() && deadline.Before(time.Now()) {
+		invalidFields = append(invalidFields, InvalidField{
 			Err:   ErrMissedDeadline,
 			Field: "deadline",
 		})
@@ -37,11 +37,23 @@ func (v *Validator) ValidateTaskData(desc string, deadline time.Time) error {
 	return nil
 }
 
-func (v *Validator) CanChangeStatus(status domain.Status) error {
-	if status == domain.DONE || status == domain.CANCELED {
+func (v *Validator) CanChangeStatus(oldStatus, newStatus domain.Status) error {
+	if newStatus == oldStatus {
 		return &ValidationError{
 			Err: ErrValidation,
-			Fields: []InvalidFiled{
+			Fields: []InvalidField{
+				{
+					Err:   ErrSameStatus,
+					Field: "status",
+				},
+			},
+		}
+	}
+
+	if oldStatus == domain.DONE || oldStatus == domain.CANCELED {
+		return &ValidationError{
+			Err: ErrValidation,
+			Fields: []InvalidField{
 				{
 					Err:   ErrUnchangeableStatus,
 					Field: "status",
